@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Chatbot Architecture Demo</title>
+
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+
+      .app {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .content {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        box-sizing: border-box;
+      }
+
+      .column {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .panel {
+        flex: 1;
+        min-height: calc(fit-content/2);
+        max-height: fit-content;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 8px;
+        box-sizing: border-box;
+        overflow: auto;
+        background: #fafafa;
+      }
+
+      .panel h2 {
+        margin: 0 0 8px 0;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      pre {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.35;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .controls {
+        border-top: 1px solid #eee;
+        padding: 12px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      input[type="text"] {
+        flex: 1;
+        min-width: 240px;
+        padding: 8px;
+      }
+
+      button {
+        padding: 8px 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app">
+      <div class="content">
+
+      <div class="column">
+            <div class="panel">
+            <h2>Runtime Trace</h2>
+            <pre id="trace"></pre>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="panel">
+            <h2>Events</h2>
+            <pre id="events"></pre>
+          </div>
+
+          <div class="panel">
+            <h2>Root</h2>
+            <pre id="root"></pre>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="panel">
+            <h2>ConversationWindow</h2>
+            <pre id="window"></pre>
+          </div>
+        </div>
+
+  
+      </div>
+
+      <div class="controls">
+        <input id="input" type="text" placeholder="SendMessage.text" />
+
+        <button id="send">SendMessage</button>
+        <button id="create">CreateConversation</button>
+        <button id="mute">MuteAudio</button>
+        <button id="unmute">UnmuteAudio</button>
+      </div>
+
+      <script type="module" src="./dist/main.js"></script>
+    </div>
+  </body>
+</html>

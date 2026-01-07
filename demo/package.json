@@ -1,0 +1,14 @@
+{
+  "name": "demo",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "esbuild ./main.ts --bundle --outfile=dist/main.js --format=esm",
+    "server": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
