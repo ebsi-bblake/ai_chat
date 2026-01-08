@@ -1,13 +1,20 @@
-import type { AudioSynthesizeResult } from "../types";
 import type { Command } from "../../../../src/types";
+import type { EffectResult } from "../../../../src/types/effects";
 import type { ID } from "../../../../src/types/runtime";
+
+type AudioSynthesizeValue = {
+  conversationId: string;
+  audioSrc: string;
+};
 
 const now = (): string => new Date().toISOString();
 
 export const resolveAudioSynthesize =
   (ids: ID) =>
-  (result: AudioSynthesizeResult): Command[] => {
+  (result: EffectResult): Command[] => {
     if (!result.ok) return [];
+
+    const value = result.value as AudioSynthesizeValue;
 
     return [
       {
@@ -16,8 +23,8 @@ export const resolveAudioSynthesize =
         id: ids(),
         time: now(),
         data: {
-          conversationId: result.value.conversationId,
-          audioSrc: result.value.audioSrc,
+          conversationId: value.conversationId,
+          audioSrc: value.audioSrc,
           avatar: "ai",
         },
       },

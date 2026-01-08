@@ -25,7 +25,9 @@ export const resolveNetworkResult =
       },
     };
 
-    const assistantText = result.value.traces.map((t) => t.content).join(" ");
+    const assistantText = result.value.traces
+      .map((t: { content: string }) => t.content)
+      .join(" ");
 
     const startAudioCommand: StartAudio = {
       type: "StartAudio",

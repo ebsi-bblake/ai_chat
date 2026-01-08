@@ -11,7 +11,7 @@ var createRuntime = (config) => {
   const runEffects = async (effects) => {
     const spawned = [];
     for (const effect of effects) {
-      const result = await config.effectHandlers.handle(effect);
+      const result = await config.effectHandlers(effect);
       const cmds = config.effectResolver(effect, result) ?? [];
       spawned.push(...cmds);
     }
@@ -59,19 +59,48 @@ var createRuntime = (config) => {
       void processQueue();
     }
   };
-  const start = () => {
+  const init = () => {
     for (const sub of config.subscriptions) {
       sub.start(dispatch);
     }
+    return {
+      bootstrap,
+      dispatch,
+      init,
+      stop,
+      getRoot: () => root,
+      getConversationWindow: () => window2
+    };
   };
   const stop = () => {
     for (const sub of config.subscriptions) {
       sub.stop();
     }
+    return {
+      bootstrap,
+      dispatch,
+      init,
+      stop,
+      getRoot: () => root,
+      getConversationWindow: () => window2
+    };
+  };
+  const bootstrap = () => {
+    const events = config.eventStore.all();
+    if (events.length) project(events);
+    return {
+      bootstrap,
+      dispatch,
+      init,
+      stop,
+      getRoot: () => root,
+      getConversationWindow: () => window2
+    };
   };
   return {
+    bootstrap,
     dispatch,
-    start,
+    init,
     stop,
     getRoot: () => root,
     getConversationWindow: () => window2
@@ -173,6 +202,11 @@ var messagingAggregate = (root, command, ids2) => {
 var now3 = () => (/* @__PURE__ */ new Date()).toISOString();
 var tracesAggregate = (_root, command, ids2) => {
   switch (command.type) {
+    case "LoadEvents":
+      return {
+        events: command.data.events,
+        effects: []
+      };
     case "ReceiveTraces": {
       const trace2 = command.data.traces.find(
         (t) => typeof t === "object" && t !== null && t.role === "assistant" && typeof t.content === "string"
@@ -214,7 +248,10 @@ var audioAggregate = (root, command, ids2) => {
         time: now4(),
         data: { conversationId: command.data.conversationId }
       };
-      return { events: [event], effects: [] };
+      const effect = {
+        type: "audio.stop"
+      };
+      return { events: [event], effects: [effect] };
     }
     case "UnmuteAudio": {
       if (!root.audioMuted) return { events: [], effects: [] };
@@ -545,32 +582,49 @@ var defaultWindow = {
 var ids = () => crypto.randomUUID();
 
 // src/effects/web/network-handler.ts
+var socket = null;
 var handleNetworkEffect = async (effect) => {
-  try {
-    const response = await fetch("http://localhost:11434/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gemma3:4b",
-        messages: [
-          {
-            role: "user",
-            content: String(effect.data.prompt)
+  switch (effect.type) {
+    case "network.post":
+      try {
+        const response = await fetch("http://localhost:11434/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "gemma3:4b",
+            messages: [
+              {
+                role: "user",
+                content: String(effect.data.prompt)
+              }
+            ],
+            stream: false
+          })
+        });
+        const data = await response.json();
+        return {
+          ok: true,
+          value: {
+            conversationId: effect.data.conversationId,
+            traces: [data.message]
           }
-        ],
-        stream: false
-      })
-    });
-    const data = await response.json();
-    return {
-      ok: true,
-      value: {
-        conversationId: effect.data.conversationId,
-        traces: [data.message]
+        };
+      } catch (error) {
+        return { ok: false, error };
       }
-    };
-  } catch (error) {
-    return { ok: false, error };
+    case "network.ws":
+      if (!socket) {
+        socket = new WebSocket("ws://localhost:11434/api/chat");
+      }
+      socket.send(
+        JSON.stringify({
+          prompt: effect.data.prompt,
+          conversationId: effect.data.conversationId
+        })
+      );
+      return { ok: true, value: null };
+    default:
+      return { ok: false, error: "unsupported-network-effect" };
   }
 };
 
@@ -579,9 +633,13 @@ var getVoice = () => {
   const voices = speechSynthesis.getVoices();
   return voices.find((v) => v.lang.startsWith("en")) ?? voices[0] ?? null;
 };
-var handleAudioSynthesize = async (effect) => {
+var handleAudioEffect = (effect) => {
   if (!("speechSynthesis" in window)) {
-    return { ok: false, error: "speechSynthesis not supported" };
+    let result = {
+      ok: false,
+      error: "unsupported-effect"
+    };
+    return result;
   }
   switch (effect.type) {
     case "audio.synthesize":
@@ -593,13 +651,57 @@ var handleAudioSynthesize = async (effect) => {
       if (voice) {
         utterance.voice = voice;
       }
-      console.log("utterance", utterance);
       speechSynthesis.cancel();
       speechSynthesis.speak(utterance);
-      return { ok: true, value: null };
+      let result = {
+        ok: true,
+        value: null
+      };
+      return result;
+    case "audio.stop":
+      console.log("stopping??");
+      speechSynthesis.cancel();
+      result = {
+        ok: true,
+        value: null
+      };
+      return result;
     default:
-      console.warn("need to handle this");
-      return { ok: true, value: null };
+      result = {
+        ok: true,
+        value: null
+      };
+      return result;
+  }
+};
+
+// src/effects/web/storage-handler.ts
+var handleStorageEffect = async (effect) => {
+  try {
+    switch (effect.type) {
+      case "storage.write":
+        localStorage.setItem(effect.data.key, effect.data.value);
+        return { ok: true, value: void 0 };
+      case "storage.read":
+        return {
+          ok: true,
+          value: {
+            value: localStorage.getItem(effect.data.key)
+          }
+        };
+      case "storage.delete":
+        localStorage.removeItem(effect.data.key);
+        return { ok: true, value: void 0 };
+      case "storage.clear":
+        Object.keys(localStorage).forEach((k) => {
+          if (!effect.data?.prefix || k.startsWith(effect.data.prefix)) {
+            localStorage.removeItem(k);
+          }
+        });
+        return { ok: true, value: void 0 };
+    }
+  } catch (error) {
+    return { ok: false, error };
   }
 };
 
@@ -607,9 +709,14 @@ var handleAudioSynthesize = async (effect) => {
 var handleEffect = async (effect) => {
   switch (effect.type) {
     case "network.post":
-      return await handleNetworkEffect(effect);
+      return handleNetworkEffect(effect);
     case "audio.synthesize":
-      return await handleAudioSynthesize(effect);
+      return handleAudioEffect(effect);
+    case "storage.write":
+    case "storage.read":
+    case "storage.delete":
+    case "storage.clear":
+      return handleStorageEffect(effect);
     default:
       return {
         ok: false,
@@ -652,13 +759,51 @@ var resolveNetworkResult = (ids2) => (result) => {
 var resolveEffect = (ids2) => (effect, result) => {
   switch (effect.type) {
     case "network.post":
+    case "network.ws":
       return resolveNetworkResult(ids2)(result);
     case "audio.synthesize":
       return [];
-    // audio has no follow-up commands
+    case "audio.stop":
+      handleAudioEffect(effect);
+      return [];
+    case "storage.read":
+    case "storage.write":
     default:
       return [];
   }
+};
+
+// src/effects/web/web-socket-subscription.ts
+var networkSubscription = (trace2, ids2) => {
+  let socket2 = null;
+  return {
+    start(dispatch) {
+      socket2 = new WebSocket("ws://localhost:11434/api/chat");
+      socket2.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        const command = {
+          type: "ReceiveTraces",
+          category: "command",
+          id: ids2(),
+          time: Date.now().toString(),
+          data: {
+            conversationId: data.conversationId,
+            avatar: "ai",
+            traces: [data]
+          }
+        };
+        trace2({
+          step: "subscription.dispatch",
+          command
+        });
+        return dispatch(command);
+      };
+    },
+    stop() {
+      socket2?.close();
+      socket2 = null;
+    }
+  };
 };
 
 // src/main.ts
@@ -672,19 +817,18 @@ var sendBtn = document.getElementById("send");
 var createBtn = document.getElementById("create");
 var muteBtn = document.getElementById("mute");
 var unmuteBtn = document.getElementById("unmute");
-var runtimeTraces = [];
-var trace = (t) => {
-  runtimeTraces.push(t);
-};
-var tracedAggregate = (root, command) => {
-  trace({ step: "aggregate", command });
-  const result = aggregate(root, command, ids);
-  trace({ step: "events", events: result.events });
-  trace({ step: "effects", effects: result.effects });
-  return result;
+var EVENTSTORE_KEY = "chatbot:eventstore";
+var conversationId = ids();
+var initialEvents = () => {
+  try {
+    const raw = localStorage.getItem(EVENTSTORE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
 };
 var eventStore = {
-  events: [],
+  events: initialEvents(),
   append(events) {
     trace({ step: "commit", events });
     this.events.push(...events);
@@ -692,6 +836,24 @@ var eventStore = {
   all() {
     return this.events;
   }
+};
+var runtimeTraces = [];
+var trace = (t) => {
+  runtimeTraces.push(t);
+};
+var tracedAggregate = (root, command) => {
+  trace({ step: "aggregate", command });
+  const result = aggregate(root, command, ids);
+  result.effects.push({
+    type: "storage.write",
+    data: {
+      key: EVENTSTORE_KEY,
+      value: JSON.stringify(eventStore.events)
+    }
+  });
+  trace({ step: "events", events: result.events });
+  trace({ step: "effects", effects: result.effects });
+  return result;
 };
 var tracedFold = (root, events) => {
   const next = foldRoot(root, events);
@@ -725,15 +887,13 @@ var runtime = createRuntime({
   eventStore,
   projectors: tracedProjectors,
   ids,
-  effectHandlers: {
-    handle: tracedEffectHandler
-  },
+  effectHandlers: tracedEffectHandler,
   effectResolver: tracedEffectResolver,
-  subscriptions: [],
+  subscriptions: [networkSubscription(trace, ids)],
   initialRoot: defaultRoot,
   initialWindow: defaultWindow
 });
-runtime.start();
+runtime.init().bootstrap();
 var render = () => {
   windowEl.textContent = JSON.stringify(
     runtime.getConversationWindow(),
@@ -751,7 +911,6 @@ var dispatchAndRender = (command) => {
   setTimeout(render, 0);
 };
 render();
-var conversationId = ids();
 createBtn.onclick = () => {
   dispatchAndRender({
     type: "CreateConversation",
@@ -796,4 +955,7 @@ unmuteBtn.onclick = () => {
 copyTraceBtn.onclick = () => {
   const text = traceEl.textContent ?? "";
   navigator.clipboard.writeText(text);
+};
+export {
+  trace
 };

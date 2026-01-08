@@ -1,7 +1,6 @@
 import { Command } from "./commands";
 import { Event } from "./events";
-import { Effect } from "./effects/index";
-import { EffectResult } from "./effects/effect-result";
+import { Effect, EffectResult } from "./effects/index";
 
 export type Dispatch = (command: Command) => void;
 export type ID = () => string;
@@ -12,6 +11,15 @@ export type Aggregate = (
 ) => {
   events: Event[];
   effects: Effect[];
+};
+
+export type RunTime = {
+  init: () => RunTime;
+  bootstrap: () => RunTime;
+  stop: () => RunTime;
+  getRoot: () => Root;
+  getConversationWindow: () => ConversationWindow;
+  dispatch: Dispatch;
 };
 
 export type EventStore = {
@@ -29,13 +37,11 @@ export type Subscription = {
   stop: () => void;
 };
 
-export type EffectHandlers = {
-  handle(effect: Effect): Promise<EffectResult<Effect>>;
-};
+export type EffectHandlers = (effect: Effect) => Promise<EffectResult>;
 
 export type EffectResolver = (
   effect: Effect,
-  result: EffectResult<Effect>,
+  result: EffectResult,
 ) => Command[] | undefined;
 
 export type Config = {

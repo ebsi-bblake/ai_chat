@@ -1,19 +1,11 @@
 import type { Command } from "./types/commands";
 import { Event } from "./types/events";
 import { Effect } from "./types/effects";
-import { Dispatch } from "./types/runtime";
+import { Dispatch, RunTime } from "./types/runtime";
 
 import { Root, Config, ConversationWindow } from "./types/runtime";
 
-export const createRuntime = (
-  config: Config,
-): {
-  start: () => void;
-  stop: () => void;
-  getRoot: () => Root;
-  getConversationWindow: () => ConversationWindow;
-  dispatch: Dispatch;
-} => {
+export const createRuntime = (config: Config): RunTime => {
   let root: Root = config.fold(config.initialRoot, config.eventStore.all());
 
   let window: ConversationWindow = config.initialWindow;
@@ -30,7 +22,7 @@ export const createRuntime = (
     const spawned: Command[] = [];
 
     for (const effect of effects) {
-      const result = await config.effectHandlers.handle(effect);
+      const result = await config.effectHandlers(effect);
       const cmds = config.effectResolver(effect, result) ?? [];
       spawned.push(...cmds);
     }
@@ -93,21 +85,51 @@ export const createRuntime = (
     }
   };
 
-  const start = (): void => {
+  const init = (): RunTime => {
     for (const sub of config.subscriptions) {
       sub.start(dispatch);
     }
+    return {
+      bootstrap,
+      dispatch,
+      init,
+      stop,
+      getRoot: (): Root => root,
+      getConversationWindow: (): ConversationWindow => window,
+    };
   };
 
-  const stop = (): void => {
+  const stop = (): RunTime => {
     for (const sub of config.subscriptions) {
       sub.stop();
     }
+    return {
+      bootstrap,
+      dispatch,
+      init,
+      stop,
+      getRoot: (): Root => root,
+      getConversationWindow: (): ConversationWindow => window,
+    };
+  };
+
+  const bootstrap = (): RunTime => {
+    const events = config.eventStore.all();
+    if (events.length) project(events);
+    return {
+      bootstrap,
+      dispatch,
+      init,
+      stop,
+      getRoot: (): Root => root,
+      getConversationWindow: (): ConversationWindow => window,
+    };
   };
 
   return {
+    bootstrap,
     dispatch,
-    start,
+    init,
     stop,
     getRoot: (): Root => root,
     getConversationWindow: (): ConversationWindow => window,

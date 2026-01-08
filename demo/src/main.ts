@@ -5,10 +5,15 @@ import { projectors } from "../../src/projectors";
 import { defaultRoot, defaultWindow } from "../../defaults";
 import { ids } from "../../platform/web/index.ts";
 import type { Command, Event, Effect } from "../../src/types";
-import type { Root, ConversationWindow } from "../../src/types/runtime";
-import type { EffectResult } from "../../src/types/effects/effect-result.ts";
+import type {
+  Root,
+  ConversationWindow,
+  RunTime,
+} from "../../src/types/runtime";
+import type { EffectResult } from "../../src/types/effects";
 import { handleEffect } from "./effects/web/effect-handlers.ts";
 import { resolveEffect } from "./effects/web/effect-resolvers.ts";
+import { networkSubscription } from "./effects/web/web-socket-subscription.ts";
 /* ---------------- DOM ---------------- */
 
 const windowEl = document.getElementById("window")!;
@@ -23,47 +28,20 @@ const createBtn = document.getElementById("create")!;
 const muteBtn = document.getElementById("mute")!;
 const unmuteBtn = document.getElementById("unmute")!;
 
-/* ---------------- Runtime Trace (edge-based) ---------------- */
+const EVENTSTORE_KEY = "chatbot:eventstore";
+const conversationId = ids();
 
-type RuntimeTrace =
-  | { step: "dispatch"; command: Command }
-  | { step: "aggregate"; command: Command }
-  | { step: "events"; events: Event[] }
-  | { step: "commit"; events: Event[] }
-  | { step: "fold"; root: Root }
-  | { step: "effects"; effects: Effect[] }
-  | { step: "effect.handle.start"; effect: Effect }
-  | { step: "effect.handle.result"; result: EffectResult<Effect> }
-  | {
-      step: "effect.resolve.start";
-      effect: Effect;
-      result: EffectResult<Effect>;
-    }
-  | { step: "effect.resolve.commands"; commands: Command[] }
-  | { step: "project"; event: Event }
-  | { step: "window"; window: ConversationWindow };
-
-const runtimeTraces: RuntimeTrace[] = [];
-
-const trace = (t: RuntimeTrace): void => {
-  runtimeTraces.push(t);
-};
-
-/* ---------------- Traced wrappers ---------------- */
-
-const tracedAggregate = (root: Root, command: Command) => {
-  trace({ step: "aggregate", command });
-
-  const result = aggregate(root, command, ids);
-
-  trace({ step: "events", events: result.events });
-  trace({ step: "effects", effects: result.effects });
-
-  return result;
+const initialEvents = () => {
+  try {
+    const raw = localStorage.getItem(EVENTSTORE_KEY);
+    return raw ? (JSON.parse(raw) as Event[]) : [];
+  } catch {
+    return [];
+  }
 };
 
 const eventStore = {
-  events: [] as Event[],
+  events: initialEvents() as Event[],
 
   append(events: Event[]): void {
     trace({ step: "commit", events });
@@ -73,6 +51,55 @@ const eventStore = {
   all(): Event[] {
     return this.events;
   },
+};
+
+/* ---------------- Runtime Trace (edge-based) ---------------- */
+
+export type RuntimeTrace =
+  | { step: "dispatch"; command: Command }
+  | { step: "aggregate"; command: Command }
+  | { step: "events"; events: Event[] }
+  | { step: "commit"; events: Event[] }
+  | { step: "fold"; root: Root }
+  | { step: "effects"; effects: Effect[] }
+  | { step: "effect.handle.start"; effect: Effect }
+  | { step: "effect.handle.result"; result: EffectResult }
+  | {
+      step: "effect.resolve.start";
+      effect: Effect;
+      result: EffectResult;
+    }
+  | { step: "effect.resolve.commands"; commands: Command[] }
+  | { step: "project"; event: Event }
+  | { step: "window"; window: ConversationWindow }
+  | {
+      step: "subscription.dispatch";
+      command: Command;
+    };
+
+const runtimeTraces: RuntimeTrace[] = [];
+
+export const trace = (t: RuntimeTrace): void => {
+  runtimeTraces.push(t);
+};
+
+/* ---------------- Traced wrappers ---------------- */
+
+const tracedAggregate = (root: Root, command: Command) => {
+  trace({ step: "aggregate", command });
+
+  const result = aggregate(root, command, ids);
+  result.effects.push({
+    type: "storage.write",
+    data: {
+      key: EVENTSTORE_KEY,
+      value: JSON.stringify(eventStore.events),
+    },
+  });
+  trace({ step: "events", events: result.events });
+  trace({ step: "effects", effects: result.effects });
+
+  return result;
 };
 
 const tracedFold = (root: Root, events: Event[]): Root => {
@@ -100,7 +127,7 @@ const tracedEffectHandler = async (effect: Effect) => {
   return result;
 };
 
-const tracedEffectResolver = (effect: Effect, result: EffectResult<Effect>) => {
+const tracedEffectResolver = (effect: Effect, result: EffectResult) => {
   trace({ step: "effect.resolve.start", effect, result });
 
   const commands = resolveEffect(ids)(effect, result) ?? [];
@@ -113,24 +140,20 @@ const tracedEffectResolver = (effect: Effect, result: EffectResult<Effect>) => {
 
 /* ---------------- Runtime ---------------- */
 
-const runtime = createRuntime({
+const runtime: RunTime = createRuntime({
   aggregate: tracedAggregate,
   fold: tracedFold,
   eventStore,
   projectors: tracedProjectors,
   ids,
-  effectHandlers: {
-    handle: tracedEffectHandler,
-  },
-
+  effectHandlers: tracedEffectHandler,
   effectResolver: tracedEffectResolver,
-
-  subscriptions: [],
+  subscriptions: [networkSubscription(trace, ids)],
   initialRoot: defaultRoot,
   initialWindow: defaultWindow,
 });
 
-runtime.start();
+runtime.init().bootstrap();
 
 /* ---------------- Render ---------------- */
 
@@ -161,8 +184,6 @@ const dispatchAndRender = (command: Command): void => {
 render();
 
 /* ---------------- Controls ---------------- */
-
-const conversationId = ids();
 
 createBtn.onclick = (): void => {
   dispatchAndRender({

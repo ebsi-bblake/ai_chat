@@ -1,9 +1,9 @@
-import type { Result } from "./result";
+import type { Result } from "./";
 export type StorageEffect =
-  | { type: "storage.write"; payload: { key: string; value: string } }
-  | { type: "storage.read"; payload: { key: string } }
-  | { type: "storage.delete"; payload: { key: string } }
-  | { type: "storage.clear"; payload?: { prefix?: string } };
+  | { type: "storage.write"; data: { key: string; value: string } }
+  | { type: "storage.read"; data: { key: string } }
+  | { type: "storage.delete"; data: { key: string } }
+  | { type: "storage.clear"; data?: { prefix?: string } };
 
 export type StorageReadResult = Result<{ value: string | null }>;
 export type StorageWriteResult = Result<void>;

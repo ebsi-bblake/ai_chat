@@ -1,4 +1,4 @@
-import type { Result } from "./result";
+import type { Result } from "./";
 export type AudioEffect =
   | { type: "audio.play"; data: Record<string, string> }
   | { type: "audio.pause" }
@@ -7,4 +7,4 @@ export type AudioEffect =
       type: "audio.synthesize";
       data: { conversationId: string; audioSrc: string };
     };
-export type AudioResult = Result<void>;
+export type AudioResult = Result<AudioEffect>;

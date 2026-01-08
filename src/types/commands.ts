@@ -1,4 +1,5 @@
 import { BaseType, Avatar } from "./base";
+import { Event } from "./events";
 
 // --------- Commands ---------
 
@@ -119,6 +120,14 @@ export type TerminateConversation = BaseType<
   }
 >;
 
+export type LoadEvents = BaseType<
+  "LoadEvents",
+  "command",
+  {
+    events: Event[];
+  }
+>;
+
 export type Command =
   | CreateConversation
   | InitiateRestartConversation
@@ -132,4 +141,5 @@ export type Command =
   | CloseChatWindow
   | TerminateConversation
   | StopAudio
+  | LoadEvents
   | StartAudio;

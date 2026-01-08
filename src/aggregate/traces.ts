@@ -19,6 +19,12 @@ export const tracesAggregate = (
   effects: [];
 } => {
   switch (command.type) {
+    case "LoadEvents":
+      return {
+        events: command.data.events,
+        effects: [],
+      };
+
     case "ReceiveTraces": {
       const trace = command.data.traces.find(
         (t): t is AssistantTrace =>

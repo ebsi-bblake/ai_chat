@@ -1,6 +1,7 @@
 import { Root, ID } from "../types/runtime";
 import { Command, Event, Effect } from "../types";
 import { AudioMuted, AudioUnmuted } from "../types/events";
+import { AudioEffect } from "../types/effects/audio";
 
 const now = (): string => new Date().toISOString();
 
@@ -24,7 +25,11 @@ export const audioAggregate = (
         data: { conversationId: command.data.conversationId },
       };
 
-      return { events: [event], effects: [] };
+      const effect: AudioEffect = {
+        type: "audio.stop",
+      };
+
+      return { events: [event], effects: [effect] };
     }
 
     case "UnmuteAudio": {

@@ -1,4 +1,4 @@
-import { Result } from "./result";
+import { Result } from "./";
 
 export type NetworkEffect =
   | {
@@ -19,6 +19,10 @@ export type NetworkEffect =
     }
   | {
       type: "network.delete";
+      data: Record<string, string>;
+    }
+  | {
+      type: "network.ws";
       data: Record<string, string>;
     };
 

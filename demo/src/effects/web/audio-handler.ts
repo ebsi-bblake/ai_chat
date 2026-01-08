@@ -1,19 +1,23 @@
+import { EffectResult } from "../../../../src/types/effects";
 import { AudioEffect } from "../../../../src/types/effects/audio";
 
 const getVoice = (): SpeechSynthesisVoice | null => {
   const voices = speechSynthesis.getVoices();
   return voices.find((v) => v.lang.startsWith("en")) ?? voices[0] ?? null;
 };
-export const handleAudioSynthesize = async (effect: AudioEffect) => {
+export const handleAudioEffect = (effect: AudioEffect) => {
   if (!("speechSynthesis" in window)) {
-    return { ok: false, error: "speechSynthesis not supported" };
+    let result: EffectResult = {
+      ok: false,
+      error: "unsupported-effect",
+    };
+    return result;
   }
 
   switch (effect.type) {
     case "audio.synthesize":
       const utterance = new SpeechSynthesisUtterance(effect.data.audioSrc);
 
-      // Optional tuning
       utterance.lang = "en-US";
       utterance.rate = 1;
       utterance.pitch = 1;
@@ -22,13 +26,28 @@ export const handleAudioSynthesize = async (effect: AudioEffect) => {
       if (voice) {
         utterance.voice = voice;
       }
-      console.log("utterance", utterance);
-      speechSynthesis.cancel(); // stop any existing speech
+      speechSynthesis.cancel();
       speechSynthesis.speak(utterance);
 
-      return { ok: true, value: null };
+      let result: EffectResult = {
+        ok: true,
+        value: null,
+      };
+      return result;
+
+    case "audio.stop":
+      console.log("stopping??");
+      speechSynthesis.cancel();
+      result = {
+        ok: true,
+        value: null,
+      };
+      return result;
     default:
-      console.warn("need to handle this");
-      return { ok: true, value: null };
+      result = {
+        ok: true,
+        value: null,
+      } as const;
+      return result;
   }
 };
