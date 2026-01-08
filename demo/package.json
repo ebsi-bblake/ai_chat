@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "esbuild ./main.ts --bundle --outfile=dist/main.js --format=esm",
+    "build": "esbuild ./src/main.ts --bundle --outfile=dist/main.js --format=esm",
     "server": "node server.js",
     "hmr": "npm run build; npm run server"
   },

@@ -347,9 +347,9 @@ var projectConversationCreated = (window, event) => {
 };
 
 // ../src/projectors/messaging.ts
-var createUtterance = (conversationId, avatar, time, messages) => ({
+var createUtterance = (conversationId2, avatar, time, messages) => ({
   time,
-  conversationId,
+  conversationId: conversationId2,
   avatar,
   messages
 });
@@ -600,7 +600,7 @@ var resolveEffect = (ids2) => (effect, result) => {
   }
 };
 
-// main.ts
+// src/main.ts
 var windowEl = document.getElementById("window");
 var rootEl = document.getElementById("root");
 var eventsEl = document.getElementById("events");
@@ -690,11 +690,12 @@ var dispatchAndRender = (command) => {
   setTimeout(render, 0);
 };
 render();
+var conversationId = ids();
 createBtn.onclick = () => {
   dispatchAndRender({
     type: "CreateConversation",
     category: "command",
-    id: ids(),
+    id: conversationId,
     data: { avatar: "participant" },
     time: Date.now().toString()
   });
@@ -706,7 +707,7 @@ sendBtn.onclick = () => {
     id: ids(),
     time: Date.now().toString(),
     data: {
-      conversationId: "",
+      conversationId,
       prompt: inputEl.value.toString(),
       avatar: "participant"
     }
@@ -719,7 +720,7 @@ muteBtn.onclick = () => {
     category: "command",
     id: ids(),
     time: Date.now().toString(),
-    data: { conversationId: "", avatar: "participant" }
+    data: { conversationId, avatar: "participant" }
   });
 };
 unmuteBtn.onclick = () => {
@@ -728,7 +729,7 @@ unmuteBtn.onclick = () => {
     category: "command",
     id: ids(),
     time: Date.now().toString(),
-    data: { conversationId: "", avatar: "participant" }
+    data: { conversationId, avatar: "participant" }
   });
 };
 copyTraceBtn.onclick = () => {
