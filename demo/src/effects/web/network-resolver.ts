@@ -1,5 +1,9 @@
 import type { NetworkResult } from "../../../../src/types/effects/network";
-import type { Command, ReceiveTraces } from "../../../../src/types/commands";
+import type {
+  Command,
+  ReceiveTraces,
+  StartAudio,
+} from "../../../../src/types/commands";
 import type { ID } from "../../../../src/types/runtime";
 
 const now = (): string => new Date().toISOString();
@@ -9,7 +13,7 @@ export const resolveNetworkResult =
   (result: NetworkResult): Command[] => {
     if (!result.ok) return [];
 
-    const cmd: ReceiveTraces = {
+    const receiveTracesCommand: ReceiveTraces = {
       type: "ReceiveTraces",
       category: "command",
       id: ids(),
@@ -21,5 +25,18 @@ export const resolveNetworkResult =
       },
     };
 
-    return [cmd];
+    const assistantText = result.value.traces.map((t) => t.content).join(" ");
+
+    const startAudioCommand: StartAudio = {
+      type: "StartAudio",
+      category: "command",
+      id: ids(),
+      time: now(),
+      data: {
+        conversationId: result.value.conversationId,
+        audioSrc: assistantText,
+        avatar: "ai",
+      },
+    };
+    return [receiveTracesCommand, startAudioCommand];
   };

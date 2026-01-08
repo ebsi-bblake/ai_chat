@@ -1,7 +1,7 @@
 // ../src/runtime.ts
 var createRuntime = (config) => {
   let root = config.fold(config.initialRoot, config.eventStore.all());
-  let window = config.initialWindow;
+  let window2 = config.initialWindow;
   let processing = false;
   const queue = [];
   const commitEvents = (events) => {
@@ -18,16 +18,17 @@ var createRuntime = (config) => {
     return spawned;
   };
   const project = (events) => {
-    window = events.reduce(
+    window2 = events.reduce(
       (w, event) => config.projectors.reduce((acc, projector) => projector(acc, event), w),
-      window
+      window2
     );
   };
   const executeCommand = async (command, accEvents) => {
-    const { events, effects } = config.aggregate(root, command);
-    if (!events.length) return;
-    commitEvents(events);
-    accEvents.push(...events);
+    const { events, effects } = config.aggregate(root, command, config.ids);
+    if (events.length) {
+      commitEvents(events);
+      accEvents.push(...events);
+    }
     if (effects.length) {
       runEffects(effects).then((spawned) => {
         for (const c of spawned) {
@@ -73,7 +74,7 @@ var createRuntime = (config) => {
     start,
     stop,
     getRoot: () => root,
-    getConversationWindow: () => window
+    getConversationWindow: () => window2
   };
 };
 
@@ -153,7 +154,7 @@ var messagingAggregate = (root, command, ids2) => {
       };
       const networkEffect = {
         type: "network.post",
-        payload: {
+        data: {
           conversationId: root.conversationId,
           prompt: command.data.prompt
         }
@@ -205,34 +206,40 @@ var now4 = () => (/* @__PURE__ */ new Date()).toISOString();
 var audioAggregate = (root, command, ids2) => {
   switch (command.type) {
     case "MuteAudio": {
-      if (root.audioMuted) {
-        return { events: [], effects: [] };
-      }
+      if (root.audioMuted) return { events: [], effects: [] };
       const event = {
         type: "AudioMuted",
         category: "system",
         id: ids2(),
         time: now4(),
-        data: {
-          conversationId: command.data.conversationId
-        }
+        data: { conversationId: command.data.conversationId }
       };
       return { events: [event], effects: [] };
     }
     case "UnmuteAudio": {
-      if (!root.audioMuted) {
-        return { events: [], effects: [] };
-      }
+      if (!root.audioMuted) return { events: [], effects: [] };
       const event = {
         type: "AudioUnmuted",
         category: "system",
         id: ids2(),
         time: now4(),
-        data: {
-          conversationId: command.data.conversationId
-        }
+        data: { conversationId: command.data.conversationId }
       };
       return { events: [event], effects: [] };
+    }
+    case "StartAudio": {
+      return {
+        events: [],
+        effects: [
+          {
+            type: "audio.synthesize",
+            data: {
+              conversationId: command.data.conversationId,
+              audioSrc: command.data.audioSrc
+            }
+          }
+        ]
+      };
     }
     default:
       return { events: [], effects: [] };
@@ -333,12 +340,12 @@ var foldRoot = (root, events) => {
 };
 
 // ../src/projectors/conversation.ts
-var projectConversationCreated = (window, event) => {
+var projectConversationCreated = (window2, event) => {
   return {
-    ...window,
+    ...window2,
     conversationId: event.data.conversationId,
     conversation: {
-      ...window.conversation,
+      ...window2.conversation,
       conversationId: event.data.conversationId,
       utterances: []
     },
@@ -353,92 +360,92 @@ var createUtterance = (conversationId2, avatar, time, messages) => ({
   avatar,
   messages
 });
-var projectMessageSent = (window, event) => {
-  const avatar = window.avatars.find((a) => a.role === "user");
-  if (!avatar) return window;
+var projectMessageSent = (window2, event) => {
+  const avatar = window2.avatars.find((a) => a.role === "user");
+  if (!avatar) return window2;
   const message = {
     avatar,
     type: "text",
     text: event.data.prompt
   };
-  const utterance = createUtterance(window.conversationId, avatar, event.time, [
+  const utterance = createUtterance(window2.conversationId, avatar, event.time, [
     message
   ]);
   return {
-    ...window,
+    ...window2,
     conversation: {
-      ...window.conversation,
-      utterances: [...window.conversation.utterances, utterance]
+      ...window2.conversation,
+      utterances: [...window2.conversation.utterances, utterance]
     }
   };
 };
-var projectMessageTextReceived = (window, event) => {
-  const avatar = window.avatars.find((a) => a.role === "assistant");
-  if (!avatar) return window;
+var projectMessageTextReceived = (window2, event) => {
+  const avatar = window2.avatars.find((a) => a.role === "assistant");
+  if (!avatar) return window2;
   const message = {
     avatar,
     text: event.data.text,
     type: "text"
   };
-  const utterance = createUtterance(window.conversationId, avatar, event.time, [
+  const utterance = createUtterance(window2.conversationId, avatar, event.time, [
     message
   ]);
   return {
-    ...window,
+    ...window2,
     conversation: {
-      ...window.conversation,
-      utterances: [...window.conversation.utterances, utterance]
+      ...window2.conversation,
+      utterances: [...window2.conversation.utterances, utterance]
     }
   };
 };
-var projectMessageRendered = (window, _event) => window;
+var projectMessageRendered = (window2, _event) => window2;
 
 // ../src/projectors/typing.ts
-var projectTypingStarted = (window, _event) => {
+var projectTypingStarted = (window2, _event) => {
   return {
-    ...window,
+    ...window2,
     isTyping: true
   };
 };
-var projectTypingStopped = (window, _event) => {
+var projectTypingStopped = (window2, _event) => {
   return {
-    ...window,
+    ...window2,
     isTyping: false
   };
 };
 
 // ../src/projectors/audio.ts
-var projectAudioPlaybackStarted = (window, _event) => {
+var projectAudioPlaybackStarted = (window2, _event) => {
   return {
-    ...window
+    ...window2
   };
 };
-var projectAudioPlaybackCompleted = (window, _event) => {
+var projectAudioPlaybackCompleted = (window2, _event) => {
   return {
-    ...window
+    ...window2
   };
 };
-var projectAudioPlaybackFailed = (window, _event) => {
+var projectAudioPlaybackFailed = (window2, _event) => {
   return {
-    ...window
+    ...window2
   };
 };
-var projectAudioMuted = (window, _event) => {
+var projectAudioMuted = (window2, _event) => {
   return {
-    ...window,
+    ...window2,
     isMuted: true
   };
 };
-var projectAudioUnmuted = (window, _event) => {
+var projectAudioUnmuted = (window2, _event) => {
   return {
-    ...window,
+    ...window2,
     isMuted: false
   };
 };
 
 // ../src/projectors/errors.ts
-var projectCommandRejected = (window, _event) => {
-  return window;
+var projectCommandRejected = (window2, _event) => {
+  return window2;
 };
 
 // ../src/projectors/guards.ts
@@ -456,47 +463,47 @@ var isTypingStarted = (event) => event.type === "TypingStarted";
 var isTypingStopped = (event) => event.type === "TypingStopped";
 
 // ../src/projectors/index.ts
-var projectEvent = (window, event) => {
+var projectEvent = (window2, event) => {
   if (isCommandRejected(event)) {
-    return projectCommandRejected(window, event);
+    return projectCommandRejected(window2, event);
   }
   if (isAudioMuted(event)) {
-    return projectAudioMuted(window, event);
+    return projectAudioMuted(window2, event);
   }
   if (isAudioUnmuted(event)) {
-    return projectAudioUnmuted(window, event);
+    return projectAudioUnmuted(window2, event);
   }
   if (isAudioPlaybackStarted(event)) {
-    return projectAudioPlaybackStarted(window, event);
+    return projectAudioPlaybackStarted(window2, event);
   }
   if (isAudioPlaybackCompleted(event)) {
-    return projectAudioPlaybackCompleted(window, event);
+    return projectAudioPlaybackCompleted(window2, event);
   }
   if (isAudioPlaybackFailed(event)) {
-    return projectAudioPlaybackFailed(window, event);
+    return projectAudioPlaybackFailed(window2, event);
   }
   if (isConversationCreated(event)) {
-    return projectConversationCreated(window, event);
+    return projectConversationCreated(window2, event);
   }
   if (isMessageSent(event)) {
-    return projectMessageSent(window, event);
+    return projectMessageSent(window2, event);
   }
   if (isMessageTextReceived(event)) {
-    return projectMessageTextReceived(window, event);
+    return projectMessageTextReceived(window2, event);
   }
   if (isTypingStarted(event)) {
-    return projectTypingStarted(window, event);
+    return projectTypingStarted(window2, event);
   }
   if (isTypingStopped(event)) {
-    return projectTypingStopped(window, event);
+    return projectTypingStopped(window2, event);
   }
   if (isMessageRendered(event)) {
-    return projectMessageRendered(window, event);
+    return projectMessageRendered(window2, event);
   }
-  return window;
+  return window2;
 };
 var projectors = [
-  (window, event) => projectEvent(window, event)
+  (window2, event) => projectEvent(window2, event)
 ];
 
 // ../defaults/index.ts
@@ -537,15 +544,8 @@ var defaultWindow = {
 // ../platform/web/index.ts
 var ids = () => crypto.randomUUID();
 
-// effect-handlers.ts
-var handleEffect = async (effect) => {
-  if (effect.type !== "network.post") {
-    return {
-      ok: false,
-      error: "unsupported-effect"
-    };
-  }
-  const e = effect;
+// src/effects/web/network-handler.ts
+var handleNetworkEffect = async (effect) => {
   try {
     const response = await fetch("http://localhost:11434/api/chat", {
       method: "POST",
@@ -553,48 +553,109 @@ var handleEffect = async (effect) => {
       body: JSON.stringify({
         model: "gemma3:4b",
         messages: [
-          { role: "user", content: String(e.payload.prompt) }
+          {
+            role: "user",
+            content: String(effect.data.prompt)
+          }
         ],
         stream: false
       })
     });
     const data = await response.json();
-    const result = {
+    return {
       ok: true,
       value: {
-        conversationId: e.payload.conversationId,
+        conversationId: effect.data.conversationId,
         traces: [data.message]
       }
     };
-    return result;
   } catch (error) {
-    return {
-      ok: false,
-      error
-    };
+    return { ok: false, error };
   }
 };
 
-// effect-resolvers.ts
+// src/effects/web/audio-handler.ts
+var getVoice = () => {
+  const voices = speechSynthesis.getVoices();
+  return voices.find((v) => v.lang.startsWith("en")) ?? voices[0] ?? null;
+};
+var handleAudioSynthesize = async (effect) => {
+  if (!("speechSynthesis" in window)) {
+    return { ok: false, error: "speechSynthesis not supported" };
+  }
+  switch (effect.type) {
+    case "audio.synthesize":
+      const utterance = new SpeechSynthesisUtterance(effect.data.audioSrc);
+      utterance.lang = "en-US";
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      const voice = getVoice();
+      if (voice) {
+        utterance.voice = voice;
+      }
+      console.log("utterance", utterance);
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utterance);
+      return { ok: true, value: null };
+    default:
+      console.warn("need to handle this");
+      return { ok: true, value: null };
+  }
+};
+
+// src/effects/web/effect-handlers.ts
+var handleEffect = async (effect) => {
+  switch (effect.type) {
+    case "network.post":
+      return await handleNetworkEffect(effect);
+    case "audio.synthesize":
+      return await handleAudioSynthesize(effect);
+    default:
+      return {
+        ok: false,
+        error: "unsupported-effect"
+      };
+  }
+};
+
+// src/effects/web/network-resolver.ts
 var now5 = () => (/* @__PURE__ */ new Date()).toISOString();
+var resolveNetworkResult = (ids2) => (result) => {
+  if (!result.ok) return [];
+  const receiveTracesCommand = {
+    type: "ReceiveTraces",
+    category: "command",
+    id: ids2(),
+    time: now5(),
+    data: {
+      conversationId: result.value.conversationId,
+      avatar: "ai",
+      traces: result.value.traces
+    }
+  };
+  const assistantText = result.value.traces.map((t) => t.content).join(" ");
+  const startAudioCommand = {
+    type: "StartAudio",
+    category: "command",
+    id: ids2(),
+    time: now5(),
+    data: {
+      conversationId: result.value.conversationId,
+      audioSrc: assistantText,
+      avatar: "ai"
+    }
+  };
+  return [receiveTracesCommand, startAudioCommand];
+};
+
+// src/effects/web/effect-resolvers.ts
 var resolveEffect = (ids2) => (effect, result) => {
   switch (effect.type) {
-    case "network.post": {
-      const r = result;
-      if (!r.ok) return [];
-      const cmd = {
-        type: "ReceiveTraces",
-        category: "command",
-        id: ids2(),
-        time: now5(),
-        data: {
-          conversationId: r.value.conversationId,
-          avatar: "ai",
-          traces: r.value.traces
-        }
-      };
-      return [cmd];
-    }
+    case "network.post":
+      return resolveNetworkResult(ids2)(result);
+    case "audio.synthesize":
+      return [];
+    // audio has no follow-up commands
     default:
       return [];
   }
@@ -638,9 +699,9 @@ var tracedFold = (root, events) => {
   return next;
 };
 var tracedProjectors = projectors.map((projector) => {
-  return (window, event) => {
+  return (window2, event) => {
     trace({ step: "project", event });
-    const next = projector(window, event);
+    const next = projector(window2, event);
     trace({ step: "window", window: next });
     return next;
   };

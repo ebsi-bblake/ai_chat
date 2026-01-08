@@ -49,11 +49,15 @@ export const createRuntime = (
     command: Command,
     accEvents: Event[],
   ): Promise<void> => {
-    const { events, effects } = config.aggregate(root, command);
-    if (!events.length) return;
+    const { events, effects } = config.aggregate(root, command, config.ids);
+    // if (!events.length && !effects.length) {
+    //   return;
+    // }
 
-    commitEvents(events);
-    accEvents.push(...events);
+    if (events.length) {
+      commitEvents(events);
+      accEvents.push(...events);
+    }
 
     if (effects.length) {
       runEffects(effects).then((spawned) => {

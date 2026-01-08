@@ -13,7 +13,10 @@ export const handleNetworkEffect = async (
       body: JSON.stringify({
         model: "gemma3:4b",
         messages: [
-          { role: "user", content: String((effect.payload as any).prompt) },
+          {
+            role: "user",
+            content: String((effect.data as any).prompt),
+          },
         ],
         stream: false,
       }),
@@ -24,7 +27,7 @@ export const handleNetworkEffect = async (
     return {
       ok: true,
       value: {
-        conversationId: (effect.payload as any).conversationId,
+        conversationId: (effect.data as any).conversationId,
         traces: [data.message],
       },
     };

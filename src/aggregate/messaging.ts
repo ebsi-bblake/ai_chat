@@ -63,7 +63,7 @@ export const messagingAggregate = (
 
       const networkEffect: NetworkEffect = {
         type: "network.post",
-        payload: {
+        data: {
           conversationId: root.conversationId,
           prompt: command.data.prompt,
         },

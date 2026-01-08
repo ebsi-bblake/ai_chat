@@ -7,8 +7,8 @@ import { ids } from "../../platform/web/index.ts";
 import type { Command, Event, Effect } from "../../src/types";
 import type { Root, ConversationWindow } from "../../src/types/runtime";
 import type { EffectResult } from "../../src/types/effects/effect-result.ts";
-import { handleEffect } from "../effect-handlers.ts";
-import { resolveEffect } from "../effect-resolvers.ts";
+import { handleEffect } from "./effects/web/effect-handlers.ts";
+import { resolveEffect } from "./effects/web/effect-resolvers.ts";
 /* ---------------- DOM ---------------- */
 
 const windowEl = document.getElementById("window")!;

@@ -74,7 +74,7 @@ export type UnmuteAudio = BaseType<
     avatar: Avatar;
   }
 >;
-type StartAudio = BaseType<
+export type StartAudio = BaseType<
   "StartAudio",
   "command",
   {
@@ -84,7 +84,7 @@ type StartAudio = BaseType<
   }
 >;
 
-type StopAudio = BaseType<
+export type StopAudio = BaseType<
   "StopAudio",
   "command",
   {
