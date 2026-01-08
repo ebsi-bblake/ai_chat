@@ -1,11 +1,12 @@
-import { Effect } from "../types/core";
+import { Effect } from "../types/effects";
 import { EffectResult } from "../types/effects/effect-result";
-import { Command } from "../types/core";
-import { ReceiveTraces } from "../types/commands/messaging";
-import { NetworkEffect } from "../types/effects/network";
+import { Command, ReceiveTraces } from "../types/commands";
 import { NetworkResult } from "../types/effects/network";
+import { EffectResolver } from "../types/runtime";
 
-export const resolveNetworkEffect = (
+const now = (): string => new Date().toISOString();
+
+export const resolveNetworkEffect: EffectResolver = (
   effect: Effect,
   result: EffectResult<Effect>,
 ): Command[] => {
@@ -13,21 +14,26 @@ export const resolveNetworkEffect = (
     return [];
   }
 
-  const networkEffect: NetworkEffect = effect;
-  const networkResult: NetworkResult = result as NetworkResult;
+  const networkResult = result as NetworkResult;
 
   if (!networkResult.ok) {
-    throw new Error(
-      `Network request failed: ${networkEffect.payload.requestId}`,
-    );
+    return [];
   }
+
+  const data = networkResult.value.data as {
+    conversationId: string;
+    traces?: unknown[];
+  };
 
   const receiveTraces: ReceiveTraces = {
     type: "ReceiveTraces",
-    payload: {
-      traces: Array.isArray(networkResult.value.data)
-        ? networkResult.value.data
-        : [],
+    category: "command",
+    id: crypto.randomUUID(),
+    time: now(),
+    data: {
+      conversationId: data.conversationId,
+      avatar: "ai",
+      traces: Array.isArray(data.traces) ? data.traces : [],
     },
   };
 

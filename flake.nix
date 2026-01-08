@@ -30,6 +30,7 @@
             packages = [
               pkgs.nodejs_20
               pkgs.git
+              pkgs.nodePackages.typescript
             ];
 
             shellHook = ''

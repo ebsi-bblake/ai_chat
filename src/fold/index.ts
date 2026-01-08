@@ -1,13 +1,11 @@
 import { Root } from "../types/runtime";
-import { Event } from "../types/core";
-import { MessageSent } from "../types/events/messaging";
+import { Event } from "../types/events";
 import { foldMessageSent } from "./messaging";
 import {
   foldConversationCreated,
   foldConversationTerminated,
 } from "./conversation";
 import { foldChatWindowOpened, foldChatWindowClosed } from "./chat-window";
-import { AudioMuted, AudioUnmuted } from "../types/events/audio";
 import { foldAudioMuted, foldAudioUnmuted } from "./audio";
 
 export const foldRoot = (root: Root, events: Event[]): Root => {

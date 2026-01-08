@@ -1,10 +1,14 @@
-import { Command, Event, Effect, Dispatch } from "./core";
-import { ConversationWindow } from "./conversation";
+import { Command } from "./commands";
+import { Event } from "./events";
+import { Effect } from "./effects/index";
 import { EffectResult } from "./effects/effect-result";
 
+export type Dispatch = (command: Command) => void;
+export type ID = () => string;
 export type Aggregate = (
   root: Root,
   command: Command,
+  ids: ID,
 ) => {
   events: Event[];
   effects: Effect[];
@@ -26,7 +30,7 @@ export type Subscription = {
 };
 
 export type EffectHandlers = {
-  handle<T extends Effect>(effect: T): Promise<EffectResult<T>>;
+  handle(effect: Effect): Promise<EffectResult<Effect>>;
 };
 
 export type EffectResolver = (
@@ -44,6 +48,7 @@ export type Config = {
   subscriptions: Subscription[];
   initialRoot: Root;
   initialWindow: ConversationWindow;
+  ids: ID;
 };
 
 export type Root = {
@@ -54,4 +59,39 @@ export type Root = {
   currentAudioUrl: string | null;
   networkRetries: Record<string, number>;
   audioRetries: Record<string, number>;
+};
+
+export type ConversationWindow = {
+  conversationId: string;
+  conversation: Conversation;
+  avatars: Avatar[];
+  isTyping: boolean;
+  isMuted: boolean;
+};
+
+export type Conversation = {
+  conversationId: string;
+  avatars: Avatar[];
+  utterances: Utterance[];
+};
+
+export type Utterance = {
+  time: string;
+  conversationId: string;
+  avatar: Avatar;
+  messages: Message[];
+};
+
+export type Message = {
+  avatar: Avatar;
+  text?: string;
+  visual?: unknown;
+  buttons?: unknown[];
+  type?: string;
+};
+
+export type Avatar = {
+  id: string;
+  name: string;
+  role: "user" | "assistant" | "system";
 };

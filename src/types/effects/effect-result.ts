@@ -1,4 +1,4 @@
-import { Effect } from "../core";
+import { Effect } from "./index";
 import { NetworkEffect, NetworkResult } from "./network";
 import {
   StorageEffect,

@@ -1,4 +1,4 @@
-import { Effect } from "../src/types/core";
+import { Effect } from "../src/types";
 import { EffectHandlers } from "../src/types/runtime";
 import { EffectResult } from "../src/types/effects/effect-result";
 

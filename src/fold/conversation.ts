@@ -1,10 +1,9 @@
 import { Root } from "../types/runtime";
-import { Event } from "../types/core";
 import {
+  Event,
   ConversationCreated,
   ConversationTerminated,
-} from "../types/events/conversation";
-import { foldConversationCreated } from "./conversation";
+} from "../types/events";
 
 export const foldConversationCreated = (
   root: Root,
@@ -12,14 +11,14 @@ export const foldConversationCreated = (
 ): Root => {
   return {
     ...root,
-    conversationId: event.payload.conversationId,
+    conversationId: event.data.conversationId,
     conversationActive: true,
   };
 };
 
 export const foldConversationTerminated = (
   root: Root,
-  event: ConversationTerminated,
+  _event: ConversationTerminated,
 ): Root => {
   return {
     ...root,

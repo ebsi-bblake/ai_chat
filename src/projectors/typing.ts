@@ -1,9 +1,9 @@
-import { ConversationWindow } from "../types/conversation";
-import { TypingStarted, TypingStopped } from "../types/events/messaging";
+import { ConversationWindow } from "../types/runtime";
+import { TypingStarted, TypingStopped } from "../types/events";
 
 export const projectTypingStarted = (
   window: ConversationWindow,
-  event: TypingStarted,
+  _event: TypingStarted,
 ): ConversationWindow => {
   return {
     ...window,
@@ -13,7 +13,7 @@ export const projectTypingStarted = (
 
 export const projectTypingStopped = (
   window: ConversationWindow,
-  event: TypingStopped,
+  _event: TypingStopped,
 ): ConversationWindow => {
   return {
     ...window,

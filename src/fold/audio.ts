@@ -5,7 +5,7 @@ import {
   AudioPlaybackStarted,
   AudioPlaybackCompleted,
   AudioPlaybackFailed,
-} from "../types/events/audio";
+} from "../types/events";
 
 export const foldAudioPlaybackStarted = (
   root: Root,
@@ -14,13 +14,13 @@ export const foldAudioPlaybackStarted = (
   return {
     ...root,
     audioPlaying: true,
-    currentAudioUrl: event.payload.url,
+    currentAudioUrl: event.data.audioSrc,
   };
 };
 
 export const foldAudioPlaybackCompleted = (
   root: Root,
-  event: AudioPlaybackCompleted,
+  _event: AudioPlaybackCompleted,
 ): Root => {
   return {
     ...root,
@@ -31,7 +31,7 @@ export const foldAudioPlaybackCompleted = (
 
 export const foldAudioPlaybackFailed = (
   root: Root,
-  event: AudioPlaybackFailed,
+  _event: AudioPlaybackFailed,
 ): Root => {
   return {
     ...root,
@@ -40,14 +40,14 @@ export const foldAudioPlaybackFailed = (
   };
 };
 
-export const foldAudioMuted = (root: Root, event: AudioMuted): Root => {
+export const foldAudioMuted = (root: Root, _event: AudioMuted): Root => {
   return {
     ...root,
     audioMuted: true,
   };
 };
 
-export const foldAudioUnmuted = (root: Root, event: AudioUnmuted): Root => {
+export const foldAudioUnmuted = (root: Root, _event: AudioUnmuted): Root => {
   return {
     ...root,
     audioMuted: false,

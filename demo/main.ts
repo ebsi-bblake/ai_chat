@@ -3,11 +3,12 @@ import { aggregate } from "../src/aggregate";
 import { foldRoot } from "../src/fold";
 import { projectors } from "../src/projectors";
 import { defaultRoot, defaultWindow } from "../defaults";
-
-import type { Command, Event, Effect } from "../src/types/core";
-import type { Root } from "../src/types/runtime";
-import type { ConversationWindow } from "../src/types/conversation";
-
+import { ids } from "../platform/web/index.ts";
+import type { Command, Event, Effect } from "../src/types";
+import type { Root, ConversationWindow } from "../src/types/runtime";
+import type { EffectResult } from "../src/types/effects/effect-result.ts";
+import { handleEffect } from "./effect-handlers.ts";
+import { resolveEffect } from "./effect-resolvers.ts";
 /* ---------------- DOM ---------------- */
 
 const windowEl = document.getElementById("window")!;
@@ -15,6 +16,7 @@ const rootEl = document.getElementById("root")!;
 const eventsEl = document.getElementById("events")!;
 const traceEl = document.getElementById("trace")!;
 
+const copyTraceBtn = document.getElementById("copyTrace")!;
 const inputEl = document.getElementById("input") as HTMLInputElement;
 const sendBtn = document.getElementById("send")!;
 const createBtn = document.getElementById("create")!;
@@ -30,6 +32,14 @@ type RuntimeTrace =
   | { step: "commit"; events: Event[] }
   | { step: "fold"; root: Root }
   | { step: "effects"; effects: Effect[] }
+  | { step: "effect.handle.start"; effect: Effect }
+  | { step: "effect.handle.result"; result: EffectResult<Effect> }
+  | {
+      step: "effect.resolve.start";
+      effect: Effect;
+      result: EffectResult<Effect>;
+    }
+  | { step: "effect.resolve.commands"; commands: Command[] }
   | { step: "project"; event: Event }
   | { step: "window"; window: ConversationWindow };
 
@@ -44,7 +54,7 @@ const trace = (t: RuntimeTrace): void => {
 const tracedAggregate = (root: Root, command: Command) => {
   trace({ step: "aggregate", command });
 
-  const result = aggregate(root, command);
+  const result = aggregate(root, command, ids);
 
   trace({ step: "events", events: result.events });
   trace({ step: "effects", effects: result.effects });
@@ -80,6 +90,27 @@ const tracedProjectors = projectors.map((projector) => {
   };
 });
 
+const tracedEffectHandler = async (effect: Effect) => {
+  trace({ step: "effect.handle.start", effect });
+
+  const result = await handleEffect(effect);
+
+  trace({ step: "effect.handle.result", result });
+
+  return result;
+};
+
+const tracedEffectResolver = (effect: Effect, result: EffectResult<Effect>) => {
+  trace({ step: "effect.resolve.start", effect, result });
+
+  const commands = resolveEffect(ids)(effect, result) ?? [];
+
+  trace({ step: "effect.resolve.commands", commands });
+
+  setTimeout(render, 0);
+  return commands;
+};
+
 /* ---------------- Runtime ---------------- */
 
 const runtime = createRuntime({
@@ -87,14 +118,12 @@ const runtime = createRuntime({
   fold: tracedFold,
   eventStore,
   projectors: tracedProjectors,
-
+  ids,
   effectHandlers: {
-    handle: async (): Promise<never> => {
-      throw new Error("No effects in demo");
-    },
+    handle: tracedEffectHandler,
   },
 
-  effectResolver: (): Command[] => [],
+  effectResolver: tracedEffectResolver,
 
   subscriptions: [],
   initialRoot: defaultRoot,
@@ -133,22 +162,54 @@ render();
 
 /* ---------------- Controls ---------------- */
 
+const conversationId = ids();
+
 createBtn.onclick = (): void => {
-  dispatchAndRender({ type: "CreateConversation" });
+  dispatchAndRender({
+    type: "CreateConversation",
+    category: "command",
+    id: conversationId,
+    data: { avatar: "participant" },
+    time: Date.now().toString(),
+  });
 };
 
 sendBtn.onclick = (): void => {
   dispatchAndRender({
     type: "SendMessage",
-    payload: { text: inputEl.value },
+    category: "command",
+    id: ids(),
+    time: Date.now().toString(),
+    data: {
+      conversationId,
+      prompt: inputEl.value.toString(),
+      avatar: "participant",
+    },
   });
   inputEl.value = "";
 };
 
 muteBtn.onclick = (): void => {
-  dispatchAndRender({ type: "MuteAudio" });
+  dispatchAndRender({
+    type: "MuteAudio",
+    category: "command",
+    id: ids(),
+    time: Date.now().toString(),
+    data: { conversationId, avatar: "participant" },
+  });
 };
 
 unmuteBtn.onclick = (): void => {
-  dispatchAndRender({ type: "UnmuteAudio" });
+  dispatchAndRender({
+    type: "UnmuteAudio",
+    category: "command",
+    id: ids(),
+    time: Date.now().toString(),
+    data: { conversationId, avatar: "participant" },
+  });
+};
+
+copyTraceBtn.onclick = () => {
+  const text = traceEl.textContent ?? "";
+  navigator.clipboard.writeText(text);
 };

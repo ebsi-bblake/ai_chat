@@ -1,6 +1,6 @@
 import { Root } from "../types/runtime";
-import { MessageSent } from "../types/events/messaging";
+import { MessageSent } from "../types/events";
 
-export const foldMessageSent = (root: Root, event: MessageSent): Root => {
+export const foldMessageSent = (root: Root, _event: MessageSent): Root => {
   return root;
 };

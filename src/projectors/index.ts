@@ -1,6 +1,5 @@
-import { Projector } from "../types/runtime";
-import { ConversationWindow } from "../types/conversation";
-import { Event } from "../types/core";
+import { Projector, ConversationWindow, ID } from "../types/runtime";
+import { Event } from "../types/events";
 
 import { projectConversationCreated } from "./conversation";
 import {

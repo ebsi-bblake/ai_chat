@@ -1,15 +1,15 @@
-import { ConversationWindow } from "../types/conversation";
+import { ConversationWindow } from "../types/runtime";
 import {
   AudioMuted,
   AudioUnmuted,
   AudioPlaybackStarted,
   AudioPlaybackCompleted,
   AudioPlaybackFailed,
-} from "../types/events/audio";
+} from "../types/events";
 
 export const projectAudioPlaybackStarted = (
   window: ConversationWindow,
-  event: AudioPlaybackStarted,
+  _event: AudioPlaybackStarted,
 ): ConversationWindow => {
   return {
     ...window,
@@ -18,7 +18,7 @@ export const projectAudioPlaybackStarted = (
 
 export const projectAudioPlaybackCompleted = (
   window: ConversationWindow,
-  event: AudioPlaybackCompleted,
+  _event: AudioPlaybackCompleted,
 ): ConversationWindow => {
   return {
     ...window,
@@ -27,7 +27,7 @@ export const projectAudioPlaybackCompleted = (
 
 export const projectAudioPlaybackFailed = (
   window: ConversationWindow,
-  event: AudioPlaybackFailed,
+  _event: AudioPlaybackFailed,
 ): ConversationWindow => {
   return {
     ...window,
@@ -35,7 +35,7 @@ export const projectAudioPlaybackFailed = (
 };
 export const projectAudioMuted = (
   window: ConversationWindow,
-  event: AudioMuted,
+  _event: AudioMuted,
 ): ConversationWindow => {
   return {
     ...window,
@@ -45,7 +45,7 @@ export const projectAudioMuted = (
 
 export const projectAudioUnmuted = (
   window: ConversationWindow,
-  event: AudioUnmuted,
+  _event: AudioUnmuted,
 ): ConversationWindow => {
   return {
     ...window,

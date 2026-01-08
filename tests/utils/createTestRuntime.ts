@@ -4,7 +4,7 @@ import { foldRoot } from "../../src/fold";
 import { projectors } from "../../src/projectors";
 import { defaultRoot, defaultWindow } from "../../defaults";
 
-import type { Event } from "../../src/types/core";
+import type { Event } from "../../src/types";
 
 export const createTestRuntime = () => {
   const eventStore = {

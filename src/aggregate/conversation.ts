@@ -1,14 +1,13 @@
-import { Aggregate, Root } from "../types/runtime";
-import { Command, Event } from "../types/core";
-import { ConversationCreated } from "../types/events/conversation";
-
-const generateConversationId = (): string => crypto.randomUUID();
+import { Root, ID } from "../types/runtime";
+import { Command, Event } from "../types";
+import { ConversationCreated } from "../types/events";
 
 const now = (): string => new Date().toISOString();
 
 export const conversationAggregate = (
   root: Root,
   command: Command,
+  ids: ID,
 ): {
   events: Event[];
   effects: [];
@@ -21,9 +20,12 @@ export const conversationAggregate = (
 
       const event: ConversationCreated = {
         type: "ConversationCreated",
-        payload: {
-          conversationId: generateConversationId(),
-          time: now(),
+        category: "session",
+        id: ids(),
+        time: now(),
+        data: {
+          conversationId: ids(),
+          avatar: command.data.avatar,
         },
       };
 

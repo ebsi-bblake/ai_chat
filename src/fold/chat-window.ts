@@ -1,12 +1,9 @@
 import { Root } from "../types/runtime";
-import {
-  ChatWindowOpened,
-  ChatWindowClosed,
-} from "../types/events/chat-window";
+import { ChatWindowOpened, ChatWindowClosed } from "../types/events";
 
 export const foldChatWindowOpened = (
   root: Root,
-  event: ChatWindowOpened,
+  _event: ChatWindowOpened,
 ): Root => {
   return {
     ...root,
@@ -16,7 +13,7 @@ export const foldChatWindowOpened = (
 
 export const foldChatWindowClosed = (
   root: Root,
-  event: ChatWindowClosed,
+  _event: ChatWindowClosed,
 ): Root => {
   return {
     ...root,

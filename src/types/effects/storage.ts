@@ -1,3 +1,4 @@
+import type { Result } from "./result";
 export type StorageEffect =
   | { type: "storage.write"; payload: { key: string; value: string } }
   | { type: "storage.read"; payload: { key: string } }

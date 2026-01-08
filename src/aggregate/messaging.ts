@@ -1,26 +1,14 @@
-import { Root } from "../types/runtime";
-import { Command, Event } from "../types/core";
-import { SendMessage } from "../types/commands/messaging";
-import { MessageSent } from "../types/events/messaging";
-import { CommandRejected } from "../types/commands/error";
+import { Root, ID } from "../types/runtime";
+import { Command, Event, Effect } from "../types";
+import { MessageSent, CommandRejected } from "../types/events";
 import { NetworkEffect } from "../types/effects/network";
-import { Effect } from "../types/core";
 
-const now = (): string => {
-  return new Date().toISOString();
-};
-
-const generateMessageId = (): string => {
-  return crypto.randomUUID();
-};
-
-const generateRequestId = (): string => {
-  return crypto.randomUUID();
-};
+const now = (): string => new Date().toISOString();
 
 export const messagingAggregate = (
   root: Root,
   command: Command,
+  ids: ID,
 ): {
   events: Event[];
   effects: Effect[];
@@ -30,70 +18,64 @@ export const messagingAggregate = (
       if (!root.conversationActive || root.conversationId === null) {
         const rejected: CommandRejected = {
           type: "CommandRejected",
-          payload: {
-            command,
+          category: "system",
+          id: ids(),
+          time: now(),
+          data: {
+            conversationId: root.conversationId ?? "unknown",
             reason: "no-active-conversation",
+            command: command.type,
+            avatar: command.data.avatar,
           },
         };
 
-        return {
-          events: [rejected],
-          effects: [],
-        };
+        return { events: [rejected], effects: [] };
       }
 
-      if (command.payload.text.trim().length === 0) {
+      if (command.data.prompt.trim().length === 0) {
         const rejected: CommandRejected = {
           type: "CommandRejected",
-          payload: {
-            command,
+          category: "system",
+          id: ids(),
+          time: now(),
+          data: {
+            conversationId: root.conversationId,
             reason: "empty-message",
+            command: command.type,
+            avatar: command.data.avatar,
           },
         };
 
-        return {
-          events: [rejected],
-          effects: [],
-        };
+        return { events: [rejected], effects: [] };
       }
 
-      const messageId: string = generateMessageId();
-      const requestId: string = generateRequestId();
-
-      const messageSent: MessageSent = {
+      const messageSentEvent: MessageSent = {
         type: "MessageSent",
-        payload: {
-          messageId,
-          time: now(),
+        category: "message",
+        id: ids(),
+        time: now(),
+        data: {
+          conversationId: root.conversationId,
+          prompt: command.data.prompt,
+          avatar: command.data.avatar,
         },
       };
 
       const networkEffect: NetworkEffect = {
         type: "network.post",
         payload: {
-          requestId,
-          url: "/messages",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: {
-            conversationId: root.conversationId,
-            messageId,
-            text: command.payload.text,
-          },
+          conversationId: root.conversationId,
+          prompt: command.data.prompt,
         },
       };
 
       return {
-        events: [messageSent],
+        events: [messageSentEvent],
         effects: [networkEffect],
       };
     }
 
     default:
-      return {
-        events: [],
-        effects: [],
-      };
+      return { events: [], effects: [] };
   }
 };

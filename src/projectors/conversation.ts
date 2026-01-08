@@ -1,6 +1,5 @@
-import { ConversationWindow } from "../types/conversation";
-import { Event } from "../types/core";
-import { ConversationCreated } from "../types/events/conversation";
+import { ConversationWindow } from "../types/runtime";
+import { ConversationCreated } from "../types/events";
 
 export const projectConversationCreated = (
   window: ConversationWindow,
@@ -8,10 +7,10 @@ export const projectConversationCreated = (
 ): ConversationWindow => {
   return {
     ...window,
-    conversationId: event.payload.conversationId,
+    conversationId: event.data.conversationId,
     conversation: {
       ...window.conversation,
-      conversationId: event.payload.conversationId,
+      conversationId: event.data.conversationId,
       utterances: [],
     },
     isTyping: false,

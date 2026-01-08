@@ -1,5 +1,6 @@
+import type { Result } from "./result";
 export type AudioEffect =
-  | { type: "audio.play"; payload: { url: string; volume?: number } }
+  | { type: "audio.play"; payload: Record<string, string> }
   | { type: "audio.pause" }
   | { type: "audio.stop" };
 

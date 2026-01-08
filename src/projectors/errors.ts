@@ -1,9 +1,9 @@
-import { ConversationWindow } from "../types/conversation";
-import { CommandRejected } from "../types/commands/error";
+import { ConversationWindow } from "../types/runtime";
+import { CommandRejected } from "../types/events";
 
 export const projectCommandRejected = (
   window: ConversationWindow,
-  event: CommandRejected,
+  _event: CommandRejected,
 ): ConversationWindow => {
   return window;
 };

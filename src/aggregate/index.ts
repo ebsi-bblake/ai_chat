@@ -1,5 +1,5 @@
-import { Root } from "../types/runtime";
-import { Command, Event, Effect } from "../types/core";
+import { Root, ID } from "../types/runtime";
+import { Command, Event, Effect } from "../types";
 
 import { conversationAggregate } from "./conversation";
 import { messagingAggregate } from "./messaging";
@@ -11,7 +11,11 @@ type AggregateResult = {
   effects: Effect[];
 };
 
-export const aggregate = (root: Root, command: Command): AggregateResult => {
+export const aggregate = (
+  root: Root,
+  command: Command,
+  ids: ID,
+): AggregateResult => {
   const aggregates = [
     conversationAggregate,
     messagingAggregate,
@@ -20,7 +24,7 @@ export const aggregate = (root: Root, command: Command): AggregateResult => {
   ];
 
   for (const fn of aggregates) {
-    const result: AggregateResult = fn(root, command);
+    const result = fn(root, command, ids);
 
     if (result.events.length > 0 || result.effects.length > 0) {
       return result;

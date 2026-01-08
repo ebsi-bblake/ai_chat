@@ -1,7 +1,9 @@
-import { Command, Event, Effect, Dispatch } from "./types/core";
+import type { Command } from "./types/commands";
+import { Event } from "./types/events";
+import { Effect } from "./types/effects";
+import { Dispatch } from "./types/runtime";
 
-import { Root, Config } from "./types/runtime";
-import { ConversationWindow } from "./types/conversation";
+import { Root, Config, ConversationWindow } from "./types/runtime";
 
 export const createRuntime = (
   config: Config,
@@ -43,7 +45,6 @@ export const createRuntime = (
       window,
     );
   };
-
   const executeCommand = async (
     command: Command,
     accEvents: Event[],
@@ -54,9 +55,12 @@ export const createRuntime = (
     commitEvents(events);
     accEvents.push(...events);
 
-    const spawned = await runEffects(effects);
-    for (const c of spawned) {
-      await executeCommand(c, accEvents);
+    if (effects.length) {
+      runEffects(effects).then((spawned) => {
+        for (const c of spawned) {
+          dispatch(c);
+        }
+      });
     }
   };
 

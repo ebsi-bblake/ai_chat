@@ -1,20 +1,18 @@
-import { Event } from "../types/core";
-import { ConversationCreated } from "../types/events/conversation";
+import { Event } from "../types/events";
 import {
+  ConversationCreated,
   MessageSent,
   MessageTextReceived,
   TypingStarted,
   TypingStopped,
   MessageRendered,
-} from "../types/events/messaging";
-import {
   AudioMuted,
   AudioUnmuted,
   AudioPlaybackStarted,
   AudioPlaybackCompleted,
+  CommandRejected,
   AudioPlaybackFailed,
-} from "../types/events/audio";
-import { CommandRejected } from "../types/commands/error";
+} from "../types/events";
 
 export const isCommandRejected = (event: Event): event is CommandRejected =>
   event.type === "CommandRejected";
